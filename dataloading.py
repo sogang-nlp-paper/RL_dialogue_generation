@@ -31,10 +31,11 @@ class Data(object):
 
     def build(self, use_glove, batch_size):
         logger.info('building field, dataset, vocab, dataiter...')
-        FIELDS = self.build_field(maxlen=MAXLEN)
-        self.train, self.val, self.test = self.build_dataset(*FIELDS)
-        sources = [self.train.fields] + [self.val.fields]
-        self.vocab = self.build_vocab(sources, *FIELDS, use_glove=use_glove)
+        HIST1, HIST2, RESP = self.build_field(maxlen=MAXLEN)
+        self.train, self.val, self.test = self.build_dataset(HIST1, HIST2, RESP)
+        sources = [self.train.hist1, self.train.hist2, self.train.resp,
+                   self.val.hist1, self.val.hist2, self.val.resp]
+        self.vocab = self.build_vocab(HIST1, HIST2, RESP, sources, use_glove)
         self.train_iter, self.valid_iter, self.test_iter =\
             self.build_iterator(self.train, self.val, self.test, batch_size)
 
@@ -60,9 +61,9 @@ class Data(object):
                                         ('resp', RESP)])
         return train, val, test
 
-    def build_vocab(self, sources, HIST1, HIST2, RESP, use_glove=False):
+    def build_vocab(self, HIST1, HIST2, RESP, sources, use_glove=False):
         v = 'glove.6B.300d' if use_glove else None
-        HIST1.build_vocab(*sources, max_size=30000, vectors=v)
+        HIST1.build_vocab(sources, max_size=30000, vectors=v)
         HIST2.vocab = RESP.vocab = HIST1.vocab
         return HIST1.vocab
 
@@ -84,5 +85,6 @@ if __name__ == '__main__':
 
     for batch in data.train_iter:
         print(batch)
-    print(data.vocab)
+    print(data.vocab.itos)
+
 
