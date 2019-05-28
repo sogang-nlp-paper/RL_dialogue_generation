@@ -1,0 +1,7 @@
+Hello there, where am I?	You don't know where you are?	Yes, that's why I'm asking.
+You don't know where you are?	Yes, that's why I'm asking.	You are such an idiot.
+Yes, that's why I'm asking.	You are such an idiot.	Don't be so mean to me.
+You are such an idiot.	Don't be so mean to me.	Stop talking you idiot.
+Don't be so mean to me.	Stop talking you idiot.	I said stop it.
+Stop talking you idiot.	I said stop it.	Why should I?
+I am not going to let you down.	Okay, I got it.	Let's go
