@@ -74,8 +74,9 @@ class Data(object):
     def build_iterator(self, train, val, test, batch_size=32):
         train_iter, valid_iter, test_iter = \
         BucketIterator.splits((train, val, test), batch_size=batch_size,
-                              sort_key=lambda ex: (len(ex.hist1),
-                                                   len(ex.hist2), len(ex.resp)),
+                              sort_key=lambda ex: (len(ex.meged_hist),
+                                                   len(ex.hist1), len(ex.hist2),
+                                                   len(ex.resp)),
                               sort_within_batch=True, repeat=False,
                               device=self.device)
         return train_iter, valid_iter, test_iter
