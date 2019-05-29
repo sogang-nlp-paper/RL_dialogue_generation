@@ -13,6 +13,7 @@ UNK_IDX = 0
 PAD_IDX = 1
 SOS_IDX = 2
 EOS_IDX = 3
+# TODO: <SEP> needed?
 
 
 class Data(object):
@@ -27,7 +28,6 @@ class Data(object):
         logger.info('data size... {} / {} / {}'.\
                     format(len(self.train), len(self.val), len(self.test)))
         logger.info('vocab size... {}'.format(len(self.vocab)))
-
 
     def build(self, use_glove, batch_size):
         logger.info('building field, dataset, vocab, dataiter...')
@@ -59,6 +59,10 @@ class Data(object):
         test = TabularDataset(path=self.test_path, format='tsv',
                                 fields=[('hist1', HIST1), ('hist2', HIST2),
                                         ('resp', RESP)])
+        for data in [train, val, test]: # merging hist1 and hist2
+            data.fields['merged_hist'] = data.fields['hist1']
+            for ex in data.examples:
+                setattr(ex, 'merged_hist', ex.hist1 + ex.hist2)
         return train, val, test
 
     def build_vocab(self, HIST1, HIST2, RESP, sources, use_glove=False):
@@ -75,7 +79,6 @@ class Data(object):
                               sort_within_batch=True, repeat=False,
                               device=self.device)
         return train_iter, valid_iter, test_iter
-
 
 if __name__ == '__main__':
     datadir = 'data'
