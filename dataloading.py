@@ -59,10 +59,15 @@ class Data(object):
         test = TabularDataset(path=self.test_path, format='tsv',
                                 fields=[('hist1', HIST1), ('hist2', HIST2),
                                         ('resp', RESP)])
+        filtered = 0
         for data in [train, val, test]: # merging hist1 and hist2
             data.fields['merged_hist'] = data.fields['hist1']
+            data.examples = [ex for ex in data if all([hasattr(ex, 'hist1'),
+                                                       hasattr(ex, 'hist2'),
+                                                       hasattr(ex, 'resp')])]
             for ex in data.examples:
                 setattr(ex, 'merged_hist', ex.hist1 + ex.hist2)
+        logger.info('number of examples filtered: ', filtered)
         return train, val, test
 
     def build_vocab(self, HIST1, HIST2, RESP, sources, use_glove=False):
@@ -74,7 +79,7 @@ class Data(object):
     def build_iterator(self, train, val, test, batch_size=32):
         train_iter, valid_iter, test_iter = \
         BucketIterator.splits((train, val, test), batch_size=batch_size,
-                              sort_key=lambda ex: (len(ex.meged_hist),
+                              sort_key=lambda ex: (len(ex.merged_hist),
                                                    len(ex.hist1), len(ex.hist2),
                                                    len(ex.resp)),
                               sort_within_batch=True, repeat=False,
