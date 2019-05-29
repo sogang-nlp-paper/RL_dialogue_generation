@@ -16,8 +16,7 @@ class Trainer():
     def train(self, data, epoch=10):
         for ep in range(epoch):
             for batch in data.train_iter:
-                print(batch)
-                softmax = self.model(batch.hist1, batch.hist2, batch.resp)
+                softmax = self.model(batch.merged_hist, batch.resp)
                 # print(softmax)
 
     def save_model(self, state_dict_name='model.bin'):
@@ -29,7 +28,7 @@ if __name__ == '__main__':
     device = torch.device('cuda')
     embed_size=300
 
-    data = Data(datadir, device, batch_size=2, use_glove=True)
+    data = Data(datadir, device, batch_size=2, use_glove=False)
     vocab_size = len(data.vocab)
 
     model = Seq2Seq(vocab_size, embed_size, embedding_weight=data.vocab.vectors).to(device)
