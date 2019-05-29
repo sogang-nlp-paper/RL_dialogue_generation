@@ -17,7 +17,7 @@ class Trainer():
         for ep in range(epoch):
             for batch in data.train_iter:
                 print(batch)
-                # softmax = self.model(batch)
+                softmax = self.model(batch.hist1, batch.hist2, batch.resp)
                 # print(softmax)
 
     def save_model(self, state_dict_name='model.bin'):
@@ -30,13 +30,10 @@ if __name__ == '__main__':
     embed_size=300
 
     data = Data(datadir, device, batch_size=2, use_glove=True)
-    print(data.vocab.freqs)
-    print(data.vocab.stoi)
-    print(data.vocab.itos)
     vocab_size = len(data.vocab)
-    print(len(data.vocab.itos), len(data.vocab))
 
-    trainer = Trainer(Seq2Seq(vocab_size, embed_size, hidden_size=100, batch_size=2))
+    model = Seq2Seq(vocab_size, embed_size, embedding_weight=data.vocab.vectors).to(device)
+    trainer = Trainer(model)
     trainer.train(data, epoch=10)
     # trainer.save_model('seq2seq.bin')
 
