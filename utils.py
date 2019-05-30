@@ -9,6 +9,7 @@ from dataloading import EOS_IDX, SOS_IDX, UNK_IDX
 logger = logging.getLogger(__name__)
 
 ### data related
+# TODO: this is wrong
 def truncate(x, token=None):
     # delete a special token in a batch
     assert token in ['sos', 'eos', 'both'], 'can only truncate sos or eos'
