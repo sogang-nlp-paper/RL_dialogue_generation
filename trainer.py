@@ -95,7 +95,7 @@ class Trainer():
         raise NotImplementedError
 
     def save_model(self, epoch):
-        if not os.path.isdir(self.savdir):
+        if not os.path.isdir(self.savedir):
             os.path.mkdir(self.savedir)
         filename = self.model.name + '_epoch{}.pt'.format(epoch)
         savedir = os.path.join(self.savedir, filename)
