@@ -2,7 +2,7 @@ import os
 import logging
 
 import torch
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from dataloading import EOS_IDX, SOS_IDX, UNK_IDX
 
@@ -13,11 +13,11 @@ def truncate(x, token=None):
     # delete a special token in a batch
     assert token in ['sos', 'eos', 'both'], 'can only truncate sos or eos'
     x, lengths = x # (B, L)
-    lengths -= 1
+    lengths_new = lengths - 1
     if token == 'sos': x = x[:, 1:]
     elif token == 'eos': x = x[:, :-1]
     else: x = x[:, 1:-1]
-    return (x, lengths)
+    return (x, lengths_new)
 
 def append(x, token=None):
     # add a special token to a batch
