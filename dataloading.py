@@ -41,13 +41,13 @@ class Data(object):
     def build_field(self, maxlen=None):
         HIST1 = Field(include_lengths=True, batch_first=True,
                         preprocessing=lambda x: x[:maxlen+1],
-                        init_token='<sos>', eos_token='<eos>', tokenize='toktok')
+                        eos_token='<eos>', tokenize='toktok')
         HIST2 = Field(include_lengths=True, batch_first=True,
                         preprocessing=lambda x: x[:maxlen+1],
-                        init_token='<sos>', eos_token='<eos>', tokenize='toktok')
+                        eos_token='<eos>', tokenize='toktok')
         RESP = Field(include_lengths=True, batch_first=True,
                         preprocessing=lambda x: x[:maxlen+1],
-                        init_token='<sos>', eos_token='<eos>', tokenize='toktok')
+                        eos_token='<eos>', tokenize='toktok')
         return HIST1, HIST2, RESP
 
     def build_dataset(self, HIST1, HIST2, RESP):
@@ -75,6 +75,12 @@ class Data(object):
     def build_vocab(self, HIST1, HIST2, RESP, sources, use_glove=False):
         v = 'glove.6B.300d' if use_glove else None
         HIST1.build_vocab(sources, max_size=30000, vectors=v)
+
+        HIST1.vocab.itos.insert(2, '<sos>')
+        from collections import defaultdict
+        stoi = defaultdict(lambda: 0)
+        stoi.update({tok: i for i, tok in enumerate(HIST1.vocab.itos)})
+        HIST1.vocab.stoi = stoi
         HIST2.vocab = RESP.vocab = HIST1.vocab
         return HIST1.vocab
 
