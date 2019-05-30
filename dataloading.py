@@ -8,7 +8,6 @@ from torchtext.data import Field, TabularDataset, BucketIterator
 MAXLEN = 22
 logger = logging.getLogger(__name__)
 
-# TODO: check if correct
 UNK_IDX = 0
 PAD_IDX = 1
 SOS_IDX = 2
@@ -62,12 +61,15 @@ class Data(object):
         filtered = 0
         for data in [train, val, test]: # merging hist1 and hist2
             data.fields['merged_hist'] = data.fields['hist1']
+            before = len(data.examples)
             data.examples = [ex for ex in data if all([hasattr(ex, 'hist1'),
                                                        hasattr(ex, 'hist2'),
                                                        hasattr(ex, 'resp')])]
+            after = len(data.examples)
+            filtered += (before - after)
             for ex in data.examples:
                 setattr(ex, 'merged_hist', ex.hist1 + ex.hist2)
-        logger.info('number of examples filtered: ', filtered)
+        logger.info('number of examples filtered: {}'.format(filtered))
         return train, val, test
 
     def build_vocab(self, HIST1, HIST2, RESP, sources, use_glove=False):

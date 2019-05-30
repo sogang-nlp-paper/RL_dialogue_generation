@@ -10,7 +10,7 @@ import torch.optim as optim
 from nlgeval import NLGEval
 
 from dataloading import PAD_IDX
-from utils import reverse, write_to_file
+from utils import truncate
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class Stats():
         to_report = {}
         for name in self.records:
             to_report[name] = np.mean(self.stats[name])
-        logger.info('stats at epoch{} step{}:\n'\
+        logger.info('stats at epoch {} step {}:\n'\
                     .format(epoch, step) + str(to_report))
 
 
@@ -63,8 +63,7 @@ class EarlyStopper():
 
 
 class Trainer():
-    def __init__(self, model, data, lr=0.001,  clip=5, records=None,
-                 savedir='models/'):
+    def __init__(self, model, data, lr,  clip, records, savedir):
         self.model = model
         self.data = data
         # TODO: implement get_optimizer
@@ -76,7 +75,9 @@ class Trainer():
     def _compute_loss(self):
         raise NotImplementedError
 
-    def _run_epoch(self, epoch, verbose=True):
+    def _run_epoch(self, epoch, sort_key=None, verbose=True):
+        if sort_key is not None:
+            self.data.train_iter.sort_key = sort_key
         for step, batch in enumerate(self.data.train_iter, 1):
             loss = self._compute_loss(batch)
             self.stats.record_stats(loss)
@@ -93,10 +94,10 @@ class Trainer():
     def train(self):
         raise NotImplementedError
 
-    # TODO: save filename
-    def save_model(self, epoch, loss):
+    def save_model(self, epoch):
+        if not os.path.isdir(self.savdir):
+            os.path.mkdir(self.savedir)
         filename = self.model.name + '_epoch{}.pt'.format(epoch)
-                   #+ '_loss{}'.format(self.stats.)
         savedir = os.path.join(self.savedir, filename)
         torch.save(self.model.state_dict(), savedir)
         logger.info('saving model in {}'.format(savedir))
@@ -123,8 +124,9 @@ class Trainer():
 
 
 class SupervisedTrainer(Trainer):
-    def __init__(self, model, data, lr, records, clip, savedir, backward=False):
-        super().__init__(model, data, lr, records, clip, savedir)
+    def __init__(self, model, data, backward=False, lr=0.001, clip=5, records=None,
+                 savedir='models/'):
+        super().__init__(model, data, lr, clip, records, savedir)
         self.backward = backward
         # TODO: check CE or NLL
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
@@ -132,17 +134,23 @@ class SupervisedTrainer(Trainer):
     def _compute_loss(self, batch):
         if self.backward:
             logits = self.model(batch.resp, batch.hist2)
+            target, _ = truncate(batch.hist2, 'sos')
         else:
             logits = self.model(batch.merged_hist, batch.resp)
+            target, _ = truncate(batch.resp, 'sos')
         B, L, _ = logits.size()
-        target, _ = batch.resp
-        loss = self.criterion(logits.view(B*L, -1), target.view(-1))
+        loss = self.criterion(logits.contiguous().view(B*L, -1),
+                              target.contiguous().view(-1))
         return loss
 
     def train(self, num_epoch, verbose=True):
+        if self.backward: # to use packed_sequence...
+            sort_key = lambda ex: (len(ex.resp), len(ex.hist2))
+        else:
+            sort_key = None
         for epoch in range(1, num_epoch+1, 1):
-            self._run_epoch(epoch, verbose)
-        self.save_model(epoch, loss)
+            self._run_epoch(epoch, sort_key, verbose)
+        self.save_model(epoch)
         return self.stats.stats
 
 
