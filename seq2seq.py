@@ -3,8 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from utils import truncate
-from dataloading import PAD_IDX, MAXLEN
+from dataloading import PAD_IDX, SOS_IDX, MAXLEN
 
+device = torch.device('cuda')
 
 
 class Seq2Seq(nn.Module):
@@ -14,14 +15,20 @@ class Seq2Seq(nn.Module):
         super(Seq2Seq, self).__init__()
         self.encoder = Encoder(vocab_size, embed_size, hidden_size, embedding_weight)
         self.decoder = AttentionDecoder(vocab_size, embed_size, hidden_size, embedding_weight)
-        self.name = name
+        # self.name = name
 
     def forward(self, merged_hist, resp):
         encoder_inputs = truncate(merged_hist, 'sos')
-        decoder_inputs = truncate(resp, 'sos')
+        decoder_inputs = resp
         encoder_outputs, encoder_hidden = self.encoder(encoder_inputs)
         decoder_outputs = self.decoder(decoder_inputs[0], encoder_hidden,
                                        encoder_inputs[0], encoder_outputs)
+        return decoder_outputs
+
+    def generate(self, merged_hist):
+        encoder_inputs = truncate(merged_hist, 'sos')
+        encoder_outputs, encoder_hidden = self.encoder(encoder_inputs)
+        decoder_outputs = self.decoder.decode(encoder_hidden, encoder_inputs[0], encoder_outputs)
         return decoder_outputs
 
 
@@ -97,6 +104,38 @@ class AttentionDecoder(nn.Module):
 
             logits_output = self.out(out_ht)  # (batch_size, vocab_size)
             logits_matrix[i] = logits_output
+
+        return logits_matrix.transpose(0, 1)
+
+    def decode(self, hidden, encoder_inputs, encoder_outputs):
+        batch_size = encoder_inputs.size(0)
+        logits_matrix = encoder_outputs.new_zeros(MAXLEN, batch_size, self.out_vocab_size)
+
+        decoder_input = torch.tensor([batch_size * [SOS_IDX]], device=device).view(batch_size, -1)
+        for i in range(MAXLEN):
+            embedded = self.embedding(decoder_input)
+
+            # step 1. lstm
+            lstm_out, hidden = self.lstm(embedded, hidden)
+            h_t = hidden[0].squeeze(0)  # hidden = (batch, hidden)
+
+            # step 2. attention socre(h_t, h_s)
+            attn_weight = self.general_score(encoder_inputs, encoder_outputs, h_t)
+            # attn_weight = self.dot_score(encoder_outputs, hidden)
+
+            # c_t
+            # context = (batch_size, 1, hidden_size)
+            context = torch.bmm(attn_weight.unsqueeze(1), encoder_outputs)
+
+            # h_t = tanh(Wc[c_t;h_t])
+            context = context.squeeze(1)
+            output = torch.cat((context, h_t), dim=1)
+            out_ht = torch.tanh(self.attention_combine(output))  # h_tilda
+
+            logits_output = self.out(out_ht)  # (batch_size, vocab_size)
+            logits_matrix[i] = logits_output
+
+            decoder_input = logits_output.max(dim=1)[1].unsqueeze(1)
 
         return logits_matrix.transpose(0, 1)
 
