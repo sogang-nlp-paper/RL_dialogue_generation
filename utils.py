@@ -14,11 +14,11 @@ def truncate(x, token=None):
     # delete a special token in a batch
     assert token in ['sos', 'eos', 'both'], 'can only truncate sos or eos'
     x, lengths = x # (B, L)
-    lengths_new = lengths - 1
+    lengths = lengths - 1
     if token == 'sos': x = x[:, 1:]
     elif token == 'eos': x = x[:, :-1]
     else: x = x[:, 1:-1]
-    return (x, lengths_new)
+    return (x, lengths)
 
 def append(x, token=None):
     # add a special token to a batch
@@ -55,18 +55,21 @@ def concat(x, y):
     6 8 5 1 1  +  6 8 5 1 1  =   6 8 5 6 8 5 1 1 1 1
     8 9 1 1 1     8 9 1 1 1      8 9 8 9 1 1 1 1 1 1
     """
-    assert len(x) == len(y), 'batch size should be same'
-    max_len_batch = x[0][0].size(1)
-    concated_batch = []
-    for i, (xx, yy) in enumerate(zip(x, y)):
-        x_data, x_len = xx
-        y_data, y_len = yy
+    batch_size = x[0].size(0)
+    assert x[0].size(0) == y[0].size(0), 'batch size should be same'
+    max_len_batch = x[0].size(1) + y[0].size(1)
+    concated_tensor = x[0].new_zeros(batch_size, max_len_batch)
+    length = x[0].new_zeros(batch_size)
+    for i in range(batch_size):  # loop for batch
+        x_data, x_len = x[0][i], x[1][i]
+        y_data, y_len = y[0][i], y[1][i]
         assert (x_data[x_len-1] == EOS_IDX) and (y_data[y_len-1] == EOS_IDX)
-        con = x_data[:x_len-1] + y_data[:y_len-1] + [EOS_IDX]
+        con = x_data[:x_len-1].tolist() + y_data[:y_len-1].tolist() + [EOS_IDX]
         pad_size = max_len_batch - len(con)
         concated = con + ([PAD_IDX] * pad_size)
-        concated_batch.append([concated, torch.LongTensor(len(con))])
-    return concated_batch
+        concated_tensor[i] = x_data.new_tensor(concated)
+        length[i] = len(con)
+    return [concated_tensor, length]
 
 
 ## TODO: various experiment with uuid

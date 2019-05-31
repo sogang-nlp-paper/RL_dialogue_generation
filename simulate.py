@@ -25,15 +25,13 @@ class Simulator:
     def simulate(self, data, turn=3):
         for batch in data.train_iter:
             input_message = batch.hist1
-            history1 = input_message[0]
+            history1 = input_message
             for t in range(turn):
                 agent = self.agent[(t % 2)]
-                logits_matrix = agent.generate(input_message)
-                _, decoder_out = logits_matrix.max(dim=2)
+                decoder_out = agent.generate(input_message)  # type of decoder out = [data, lenght]
 
                 history2 = decoder_out
-                input_message = concat(history1, history2)  # TODO concat without padding
-                input_message = [input_message, torch.LongTensor([input_message.size(1)])]  # TODO need to pack with batch
+                input_message = concat(history1, history2)
                 history1 = history2
 
     def debug(self, data, turn=3, sample_num=10):
@@ -64,7 +62,7 @@ if __name__ == '__main__':
     embed_size = 300
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--state_dict', default='seq2seq.bin')
+    parser.add_argument('--state_dict', default='forward_epoch1.pt')
     args = parser.parse_args()
 
     data = Data(datadir, device, batch_size=1, use_glove=False)
