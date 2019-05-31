@@ -38,6 +38,12 @@ class Seq2Seq(nn.Module):
         _, decoder_outputs = logits_matrix.max(dim=2)
         return _wrap_batch(decoder_outputs)
 
+    @classmethod
+    def load(cls, path, *args, **kwargs):
+        seq2seq = cls(*args, **kwargs)
+        seq2seq.load_state_dict(torch.load(path))
+        return seq2seq
+
 
 class Encoder(nn.Module):
 
