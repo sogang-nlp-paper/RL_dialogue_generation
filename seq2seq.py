@@ -31,6 +31,12 @@ class Seq2Seq(nn.Module):
         decoder_outputs = self.decoder.decode(encoder_hidden, encoder_inputs[0], encoder_outputs)
         return decoder_outputs
 
+    @classmethod
+    def load(cls, path, *args, **kwargs):
+        seq2seq = cls(*args, **kwargs)
+        seq2seq.load_state_dict(torch.load(path))
+        return seq2seq
+
 
 class Encoder(nn.Module):
 

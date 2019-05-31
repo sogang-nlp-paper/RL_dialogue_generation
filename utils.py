@@ -34,6 +34,28 @@ def append(x, token=None):
         x = torch.cat([sos, x], dim=1)
     return (x, lengths)
 
+# TODO: some examples may not have EOS at all
+def get_actual_lengths(y):
+    # get actual length of a generated batch considering eos
+    non_zeros = (y == EOS_IDX).nonzero()
+    num_nonzeros = non_zeros.size(0)
+    is_dirty = [False for _ in range(num_nonzeros)]
+    lengths = []
+    for idx in non_zeros:
+        i, j = idx[0].item(), idx[1].item()
+        if not is_dirty[i]:
+            is_dirty[i] = True
+            lengths.append(j+1) # zero-index
+    return torch.tensor(lengths, device=non_zeros.device)
+
+def sort_by_length(y, lengths):
+    # sort hy, y in decreasing order(for compatibility with packed_sequence)
+    l = [(tok, l) for tok, l in zip(y, lengths)]
+    sorted_l = sorted(l, key=lambda x: x[1], reverse=True)
+    h = torch.stack([i[0] for i in sorted_l], dim=0)
+    lengths = torch.stack([i[1] for i in sorted_l], dim=0)
+    return h, lengths
+
 def reverse(batch, vocab):
     # turn a batch of idx to tokens
     batch = batch.tolist()
