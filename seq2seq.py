@@ -25,8 +25,8 @@ class Seq2Seq(nn.Module):
                                        encoder_inputs[0], encoder_outputs)
         return decoder_outputs
 
-    def generate(self, merged_hist):
-        encoder_inputs = truncate(merged_hist, 'sos')
+    def generate(self, input_message):
+        encoder_inputs = truncate(input_message, 'sos')
         encoder_outputs, encoder_hidden = self.encoder(encoder_inputs)
         decoder_outputs = self.decoder.decode(encoder_hidden, encoder_inputs[0], encoder_outputs)
         return decoder_outputs

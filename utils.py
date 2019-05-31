@@ -4,7 +4,7 @@ import logging
 import torch
 # import matplotlib.pyplot as plt
 
-from dataloading import EOS_IDX, SOS_IDX, UNK_IDX
+from dataloading import EOS_IDX, SOS_IDX, UNK_IDX, PAD_IDX
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +44,30 @@ def reverse(batch, vocab):
                 break
             sentence.append(w)
         return sentence
-    batch = [trim(ex, EOS_IDX) for ex in batch]
+    # batch = [trim(ex, EOS_IDX) for ex in batch]
     batch = [' '.join([vocab.itos[i] for i in ex]) for ex in batch]
     return batch
+
+
+def concat(x, y):
+    """ concat two batches with padding
+    7 6 7 8 1     7 6 7 8 1      7 6 7 8 7 6 7 8 1 1
+    6 8 5 1 1  +  6 8 5 1 1  =   6 8 5 6 8 5 1 1 1 1
+    8 9 1 1 1     8 9 1 1 1      8 9 8 9 1 1 1 1 1 1
+    """
+    assert len(x) == len(y), 'batch size should be same'
+    max_len_batch = x[0][0].size(1)
+    concated_batch = []
+    for i, (xx, yy) in enumerate(zip(x, y)):
+        x_data, x_len = xx
+        y_data, y_len = yy
+        assert (x_data[x_len-1] == EOS_IDX) and (y_data[y_len-1] == EOS_IDX)
+        con = x_data[:x_len-1] + y_data[:y_len-1] + [EOS_IDX]
+        pad_size = max_len_batch - len(con)
+        concated = con + ([PAD_IDX] * pad_size)
+        concated_batch.append([concated, torch.LongTensor(len(con))])
+    return concated_batch
+
 
 ## TODO: various experiment with uuid
 #def write_to_file(write_list, msg, data_type, epoch, savedir='experiment'):
