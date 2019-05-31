@@ -36,7 +36,7 @@ class Seq2Seq(nn.Module):
         encoder_outputs, encoder_hidden = self.encoder(encoder_inputs)
         logits_matrix = self.decoder.decode(encoder_hidden, encoder_inputs[0], encoder_outputs)
         _, decoder_outputs = logits_matrix.max(dim=2)
-        return _wrap_batch(decoder_outputs)
+        return logits_matrix, _wrap_batch(decoder_outputs)
 
     @classmethod
     def load(cls, path, *args, **kwargs):

@@ -14,25 +14,30 @@ device = torch.device('cuda')
 
 class Simulator:
 
-    def __init__(self, model, state_dict=None):
+    def __init__(self, model, reward_func, criterion):
         self.agentA = model
         self.agentB = model
-        if state_dict is not None:
-            self.agentA.load_state_dict(torch.load(state_dict))
-            self.agentB.load_state_dict(torch.load(state_dict))
+        # if state_dict is not None:
+        #     self.agentA.load_state_dict(torch.load(state_dict))
+        #     self.agentB.load_state_dict(torch.load(state_dict))
         self.agent = [self.agentA, self.agentB]
+        self.reward_func = reward_func
+        self.criterion = criterion
 
-    def simulate(self, data, turn=3):
-        for batch in data.train_iter:
-            input_message = batch.hist1
-            history1 = input_message
-            for t in range(turn):
-                agent = self.agent[(t % 2)]
-                decoder_out = agent.generate(input_message)  # type of decoder out = [data, lenght]
+    def simulate(self, batch, turn=3):
+        # for batch in data.train_iter:
+        input_message = batch.hist1
+        history1 = input_message
+        reward = 0
+        for t in range(turn):
+            agent = self.agent[(t % 2)]
+            logits_matrix, decoder_out = agent.generate(input_message)  # type of decoder out = [data, lenght]
+            reward += 1  # FIXME
 
-                history2 = decoder_out
-                input_message = concat(history1, history2)
-                history1 = history2
+            history2 = decoder_out
+            input_message = concat(history1, history2)
+            history1 = history2
+        return reward
 
     def debug(self, data, turn=3, sample_num=10):
         logger.info("Debugging ...")
