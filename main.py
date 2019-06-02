@@ -35,7 +35,7 @@ if  __name__ == "__main__":
             .to(DEVICE)
         seq2seq_back = Seq2Seq(VOCAB_SIZE, EMBEDDING, HIDDEN, name='backward')\
             .to(DEVICE)
-        trainer_for = SupervisedTrainer(seq2seq, data, lr=0.001,
+        trainer_for = SupervisedTrainer(seq2seq_for, data, lr=0.001,
                                         records=['NLLLoss'])
         trainer_back = SupervisedTrainer(seq2seq_back, data, lr=0.001,
                                          records=['NLLLoss'], backward=True)
