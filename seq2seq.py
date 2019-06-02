@@ -3,19 +3,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from utils import truncate
-from dataloading import PAD_IDX, SOS_IDX, MAXLEN
-
-device = torch.device('cuda')
+from dataloading import PAD_IDX, SOS_IDX, EOS_IDX, MAXLEN
 
 
 class Seq2Seq(nn.Module):
 
-    def __init__(self, vocab_size, embed_size, hidden_size=100,
+    def __init__(self, vocab_size, embed_size, hidden_size=500,
                  embedding_weight=None, name=None):
         super(Seq2Seq, self).__init__()
         self.encoder = Encoder(vocab_size, embed_size, hidden_size, embedding_weight)
         self.decoder = AttentionDecoder(vocab_size, embed_size, hidden_size, embedding_weight)
-        # self.name = name
+        self.name = name
 
     def forward(self, merged_hist, resp):
         encoder_inputs = truncate(merged_hist, 'sos')
@@ -26,10 +24,19 @@ class Seq2Seq(nn.Module):
         return decoder_outputs
 
     def generate(self, input_message):
+
+        def _wrap_batch(outputs):
+            """ wrap (tensor data, lengths) like batch """
+            eos = outputs.new_full((outputs.size(0), 1), EOS_IDX)
+            outputs = torch.cat([outputs, eos], dim=1)
+            lengths = [x.tolist().index(EOS_IDX) + 1 for x in outputs]
+            return outputs, torch.LongTensor(lengths)
+
         encoder_inputs = truncate(input_message, 'sos')
         encoder_outputs, encoder_hidden = self.encoder(encoder_inputs)
-        decoder_outputs = self.decoder.decode(encoder_hidden, encoder_inputs[0], encoder_outputs)
-        return decoder_outputs
+        logits_matrix = self.decoder.decode(encoder_hidden, encoder_inputs[0], encoder_outputs)
+        _, decoder_outputs = logits_matrix.max(dim=2)
+        return logits_matrix, _wrap_batch(decoder_outputs)
 
     @classmethod
     def load(cls, path, *args, **kwargs):
@@ -57,7 +64,7 @@ class Encoder(nn.Module):
         embedded = self.embedding(sentence_tensor)
         packed = pack_padded_sequence(embedded, length, batch_first=True)
         output, hidden = self.lstm(packed)
-        output, _ = pad_packed_sequence(output, batch_first=True)
+        output, _ = pad_packed_sequence(output, batch_first=True, total_length=sentence_tensor.size(1))
         return output, hidden
 
 
@@ -116,8 +123,8 @@ class AttentionDecoder(nn.Module):
     def decode(self, hidden, encoder_inputs, encoder_outputs):
         batch_size = encoder_inputs.size(0)
         logits_matrix = encoder_outputs.new_zeros(MAXLEN, batch_size, self.out_vocab_size)
+        decoder_input = encoder_inputs.new_tensor([batch_size * [SOS_IDX]]).view(batch_size, -1)
 
-        decoder_input = torch.tensor([batch_size * [SOS_IDX]], device=device).view(batch_size, -1)
         for i in range(MAXLEN):
             embedded = self.embedding(decoder_input)
 
