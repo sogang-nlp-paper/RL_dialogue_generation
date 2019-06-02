@@ -31,11 +31,14 @@ if  __name__ == "__main__":
     # if MODE == 'SUPERVISED PRETRAIN'
     # supervised learning
     if SUPERVISED_FORWARD is None or SUPERVISED_BACKWARD is None:
-        seq2seq_for = Seq2Seq(VOCAB_SIZE, EMBEDDING, HIDDEN, name='forward').to(DEVICE)
-        seq2seq_back = Seq2Seq(VOCAB_SIZE, EMBEDDING, HIDDEN, name='backward').to(DEVICE)
-        trainer_for = SupervisedTrainer(seq2seq, data, lr=0.001, records=['NLLLoss'])
-        trainer_back = SupervisedTrainer(seq2seq_back, data, lr=0.001, records=['NLLLoss'],
-                                         backward=True)
+        seq2seq_for = Seq2Seq(VOCAB_SIZE, EMBEDDING, HIDDEN, name='forward')\
+            .to(DEVICE)
+        seq2seq_back = Seq2Seq(VOCAB_SIZE, EMBEDDING, HIDDEN, name='backward')\
+            .to(DEVICE)
+        trainer_for = SupervisedTrainer(seq2seq, data, lr=0.001,
+                                        records=['NLLLoss'])
+        trainer_back = SupervisedTrainer(seq2seq_back, data, lr=0.001,
+                                         records=['NLLLoss'], backward=True)
         results_for = trainer_for.train(num_epoch=EPOCH, verbose=True)
         results_back = trainer_back.train(num_epoch=EPOCH, verbose=True)
         SUPERVISED_FORWARD = results_for['savedir']

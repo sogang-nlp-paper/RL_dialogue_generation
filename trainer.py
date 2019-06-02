@@ -1,6 +1,5 @@
 import os
 import logging
-from copy import deepcopy
 from collections import defaultdict
 
 import numpy as np
@@ -16,8 +15,9 @@ from utils import truncate
 logger = logging.getLogger(__name__)
 
 
+# TODO: Stats, EarlyStopper, Simulator -> train_utils.py
 # TODO: running average
-class Stats():
+class Stats:
     def __init__(self, records):
         self.records = records
         self.reset_stats()
@@ -38,7 +38,7 @@ class Stats():
                     .format(epoch, step) + str(to_report))
 
 
-class EarlyStopper():
+class EarlyStopper:
     def __init__(self, patience, metric):
         self.patience = patience
         self.metric = metric # 'Bleu_1', ..., 'METEOR', 'ROUGE_L'
@@ -51,10 +51,12 @@ class EarlyStopper():
             self.is_improved = False
             if self.count <= self.patience:
                 self.count += 1
-                logger.info('Counting early stop patience... {}'.format(self.count))
+                logger.info('Counting early stop patience... {}'\
+                            .format(self.count))
                 return False
             else:
-                logger.info('Early stopping patience exceeded. Stopping training...')
+                logger.info('Early stopping patience exceeded.\
+                            Stopping training...')
                 return True # halt training
         else:
             self.is_improved = True
@@ -63,7 +65,7 @@ class EarlyStopper():
             return False
 
 
-class Trainer():
+class BaseTrainer:
     def __init__(self, model, data, lr,  clip, records, savedir):
         self.model = model
         self.data = data
@@ -92,13 +94,12 @@ class Trainer():
         torch.save(self.model.state_dict(), savedir)
         return savedir
 
-
     # TODO: evaluate and write to file!
     def evaluate(self, data_type, epoch):
         pass
 
 
-class SupervisedTrainer(Trainer):
+class SupervisedTrainer(BaseTrainer):
     def __init__(self, model, data, backward=False, lr=0.001, clip=5,
                  records=None, savedir='models/'):
         super().__init__(model, data, lr, clip, records, savedir)
@@ -145,9 +146,9 @@ class SupervisedTrainer(Trainer):
         return {'savedir': savedir, 'stats': self.stats.stats}
 
 
-class RLTrainer(Trainer):
-    def __init__(self, model, data, reward_func, lr=0.001, clip=5, turn= 3,
-                 records=None, savedir='models/', patience=3, metric='Bleu_1'):
+class RLTrainer(BaseTrainer):
+    def __init__(self, model, data, reward_func, lr=0.001, clip=5, turn=3,
+                 records=None, savedir='models/',patience=3, metric='Bleu_1'):
         super().__init__(model, data, lr, clip, records, savedir)
         # TODO: variable name - criterion?
         self.criterion = nn.CrossEntropyLoss(ignore_index=PAD_IDX,
