@@ -32,7 +32,6 @@ class Seq2Seq(nn.Module):
             lengths = [x.tolist().index(EOS_IDX) + 1 for x in outputs]
             return outputs, torch.LongTensor(lengths)
 
-        # input_batch = (input_tensor.unsqueeze(0), torch.LongTensor([input_tensor.size(0)]))
         encoder_inputs = truncate(input_batch, 'sos')
         encoder_outputs, encoder_hidden = self.encoder(encoder_inputs)
         logits_matrix = self.decoder.decode(encoder_hidden, encoder_inputs[0], encoder_outputs)
@@ -123,6 +122,7 @@ class AttentionDecoder(nn.Module):
 
     def decode(self, hidden, encoder_inputs, encoder_outputs):
         batch_size = encoder_inputs.size(0)
+        assert batch_size == 1, 'batch_size must be 1 for generating dialogue'
         logits_matrix = encoder_outputs.new_zeros(MAXLEN, batch_size, self.out_vocab_size)
         decoder_input = encoder_inputs.new_tensor([batch_size * [SOS_IDX]]).view(batch_size, -1)
 

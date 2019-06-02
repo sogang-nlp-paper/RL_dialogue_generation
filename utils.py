@@ -66,7 +66,7 @@ def reverse(batch, vocab):
                 break
             sentence.append(w)
         return sentence
-    # batch = [trim(ex, EOS_IDX) for ex in batch]
+    batch = [trim(ex, EOS_IDX) for ex in batch]
     batch = [' '.join([vocab.itos[i] for i in ex]) for ex in batch]
     return batch
 
