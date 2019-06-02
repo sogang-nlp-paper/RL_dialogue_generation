@@ -85,7 +85,7 @@ class BaseTrainer:
         raise NotImplementedError
 
     # TODO: save_checkpoint like in DME code
-    def save_model(self, epoch):
+    def save_model(self, epoch, savedir='models/'):
         logger.info('saving model in {}'.format(savedir))
         if not os.path.isdir(self.savedir):
             os.mkdir(self.savedir)
@@ -111,15 +111,15 @@ class SupervisedTrainer(BaseTrainer):
             logits = self.model(batch.resp, batch.hist2)
             target, _ = truncate(batch.hist2, 'sos')
         else:
-            batch
             logits = self.model(batch.merged_hist, batch.resp)
+            logits = logits[:, :-1, :]  # truncate 'eos' token
             target, _ = truncate(batch.resp, 'sos')
         B, L, _ = logits.size()
         loss = self.criterion(logits.contiguous().view(B*L, -1),
                               target.contiguous().view(-1))
         return loss
 
-    def _run_epoch(self, sort_key=None, verbose=True):
+    def _run_epoch(self, epoch, sort_key=None, verbose=True):
         if sort_key is not None:
             self.data.train_iter.sort_key = sort_key
         for step, batch in enumerate(self.data.train_iter, 1):
@@ -142,7 +142,7 @@ class SupervisedTrainer(BaseTrainer):
             sort_key = None
         for epoch in range(1, num_epoch+1, 1):
             self._run_epoch(epoch, sort_key, verbose)
-        savedir = self.save_model(epoch)
+            savedir = self.save_model(epoch)
         return {'savedir': savedir, 'stats': self.stats.stats}
 
 

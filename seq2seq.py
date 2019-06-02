@@ -23,7 +23,7 @@ class Seq2Seq(nn.Module):
                                        encoder_inputs[0], encoder_outputs)
         return decoder_outputs
 
-    def generate(self, input_message):
+    def generate(self, input_batch):
 
         def _wrap_batch(outputs):
             """ wrap (tensor data, lengths) like batch """
@@ -32,7 +32,8 @@ class Seq2Seq(nn.Module):
             lengths = [x.tolist().index(EOS_IDX) + 1 for x in outputs]
             return outputs, torch.LongTensor(lengths)
 
-        encoder_inputs = truncate(input_message, 'sos')
+        # input_batch = (input_tensor.unsqueeze(0), torch.LongTensor([input_tensor.size(0)]))
+        encoder_inputs = truncate(input_batch, 'sos')
         encoder_outputs, encoder_hidden = self.encoder(encoder_inputs)
         logits_matrix = self.decoder.decode(encoder_hidden, encoder_inputs[0], encoder_outputs)
         _, decoder_outputs = logits_matrix.max(dim=2)
